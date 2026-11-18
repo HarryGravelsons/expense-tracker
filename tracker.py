@@ -1,5 +1,6 @@
 import json
 import os
+from datetime import date
 
 FILENAME = "expenses.json"
 
@@ -48,7 +49,8 @@ def add_expense():
                 print("Please enter 0 or more.")
         except ValueError:
             print("Please enter a number, like 4.50")
-    expenses.append({"item": item, "category": category, "amount": amount})
+    today = date.today().isoformat()
+    expenses.append({"item": item, "category": category, "amount": amount, "date": today})
     save_expenses()
     print("Saved!")
 
@@ -94,7 +96,8 @@ def delete_expense():
 
     # 1. Show the expenses with numbers
     for number, expense in enumerate(expenses, start=1):
-        print(f"{number}. {expense['item']}: £{expense['amount']:.2f}")
+        expense_date = expense.get("date", "unknown")
+        print(f"{number}. {expense['item']}: £{expense['amount']:.2f} ({expense_date})")
 
     # 2 and 3. Ask which one, and check it's valid
     while True:
