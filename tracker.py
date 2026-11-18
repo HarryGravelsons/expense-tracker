@@ -88,6 +88,53 @@ def show_report():
         print(f"{category}: £{amount:.2f}")
     show_total()
 
+def ask_month(question):
+    """Ask until the user gives a valid YYYY-MM month. Return None if they type 'back'."""
+    while True:
+        answer = ask_text(question)
+        if answer is None:
+            return None
+        parts = answer.split("-")
+        if len(parts) != 2 or len(parts[0]) != 4 or len(parts[1]) != 2:
+            print("Please enter a month like 2026-11.")
+            continue
+        try:
+            year = int(parts[0])
+            month = int(parts[1])
+        except ValueError:
+            print("Please enter a month like 2026-11.")
+            continue
+        if 1 <= month <= 12:
+            return answer
+        print("Please enter a month like 2026-11.")
+
+def show_month_report():
+    """Ask for a month and show the expenses and total for that month."""
+    month = ask_month("Which month (YYYY-MM)? ")
+    if month is None:
+        return
+
+    matches = []
+    skipped = 0
+    for expense in expenses:
+        if "date" not in expense:
+            skipped = skipped + 1
+        elif expense["date"][:7] == month:
+            matches.append(expense)
+
+    if not matches:
+        print(f"No expenses found for {month}.")
+    else:
+        print(f"\nExpenses for {month}:")
+        total = 0
+        for expense in matches:
+            print(f"{expense['item']}: £{expense['amount']:.2f} ({expense['date']})")
+            total = total + expense["amount"]
+        print(f"Total for {month}: £{total:.2f}")
+
+    if skipped:
+        print(f"({skipped} expense(s) skipped - no date saved.)")
+
 def delete_expense():
     """Let the user remove one expense by number."""
     if not expenses:
@@ -126,7 +173,8 @@ while True:
     print("3. Show food total")
     print("4. Spending report")
     print("5. Delete expense")
-    print("6. Quit")
+    print("6. Monthly report")
+    print("7. Quit")
     choice = input("Choose an option: ")
 
     if choice == "1":
@@ -140,7 +188,9 @@ while True:
     elif choice == "5":
         delete_expense()
     elif choice == "6":
+        show_month_report()
+    elif choice == "7":
         print("Goodbye!")
         break
     else:
-        print("Please choose 1, 2, 3, 4 or 5.")
+        print("Please choose 1, 2, 3, 4, 5, 6 or 7.")
