@@ -86,12 +86,44 @@ def show_report():
         print(f"{category}: £{amount:.2f}")
     show_total()
 
+def delete_expense():
+    """Let the user remove one expense by number."""
+    if not expenses:
+        print("No expenses to delete.")
+        return
+
+    # 1. Show the expenses with numbers
+    for number, expense in enumerate(expenses, start=1):
+        print(f"{number}. {expense['item']}: £{expense['amount']:.2f}")
+
+    # 2 and 3. Ask which one, and check it's valid
+    while True:
+        answer = input("Number to delete (or 'back'): ").strip().lower()
+        if answer == "back":
+            return
+        try:
+            number = int(answer)
+            if 1 <= number <= len(expenses):
+                break
+            else:
+                print(f"Please enter a number between 1 and {len(expenses)}.")
+        except ValueError:
+            print("Please enter a whole number.")
+
+    # 4. Remove it (remember: list positions start at 0!)
+    removed = expenses.pop(number -1)
+
+    # 5. Save and confirm
+    save_expenses()
+    print(f"Deleted: {removed['item']}")
+
 while True:
     print("\n1. Add expense")
     print("2. Show total")
     print("3. Show food total")
     print("4. Spending report")
-    print("5. Quit")
+    print("5. Delete expense")
+    print("6. Quit")
     choice = input("Choose an option: ")
 
     if choice == "1":
@@ -103,6 +135,8 @@ while True:
     elif choice == "4":
         show_report()
     elif choice == "5":
+        delete_expense()
+    elif choice == "6":
         print("Goodbye!")
         break
     else:
