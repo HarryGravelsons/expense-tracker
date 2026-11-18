@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Expense Tracker</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 16px;
+        }
+        h1, h2 {
+            margin-top: 24px;
+        }
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+        li {
+            padding: 8px 0;
+            border-bottom: 1px solid #ddd;
+        }
+        .date, .category {
+            color: #666;
+            font-size: 0.9em;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        input, button {
+            font-size: 1.1em;
+            padding: 10px;
+        }
+        .flash {
+            background: #fee;
+            border: 1px solid #c00;
+            padding: 10px;
+            margin-bottom: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Expense Tracker</h1>
+
+    {% for message in get_flashed_messages() %}
+        <div class="flash">{{ message }}</div>
+    {% endfor %}
+
+    <h2>Add expense</h2>
+    <form method="post" action="{{ url_for('add') }}">
+        <input type="text" name="item" placeholder="What did you buy?" required>
+        <input type="text" name="category" placeholder="Category" required>
+        <input type="text" name="amount" placeholder="Amount (£)" required>
+        <button type="submit">Save</button>
+    </form>
+
+    <h2>Totals</h2>
+    <p>Total spent: £{{ "%.2f"|format(total) }}</p>
+    <ul>
+        {% for category, amount in breakdown.items() %}
+            <li>{{ category }}: £{{ "%.2f"|format(amount) }}</li>
+        {% endfor %}
+    </ul>
+
+    <h2>Expenses</h2>
+    <ul>
+        {% for expense in expenses %}
+            <li>
+                {{ expense.item }} &mdash; £{{ "%.2f"|format(expense.amount) }}
+                <br>
+                <span class="category">{{ expense.category }}</span>
+                <span class="date">{{ expense.get("date", "unknown") }}</span>
+            </li>
+        {% else %}
+            <li>No expenses yet.</li>
+        {% endfor %}
+    </ul>
+</body>
+</html>

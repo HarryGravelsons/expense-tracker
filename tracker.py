@@ -210,30 +210,31 @@ def delete_expense():
     removed = remove_expense_at(expenses, number)
     print(f"Deleted: {removed['item']}")
 
-while True:
-    print("\n1. Add expense")
-    print("2. Show total")
-    print("3. Show food total")
-    print("4. Spending report")
-    print("5. Delete expense")
-    print("6. Monthly report")
-    print("7. Quit")
-    choice = input("Choose an option: ")
+if __name__ == "__main__":
+    while True:
+        print("\n1. Add expense")
+        print("2. Show total")
+        print("3. Show food total")
+        print("4. Spending report")
+        print("5. Delete expense")
+        print("6. Monthly report")
+        print("7. Quit")
+        choice = input("Choose an option: ")
 
-    if choice == "1":
-        add_expense()
-    elif choice == "2":
-        show_total()
-    elif choice == "3":
-        show_food_total()
-    elif choice == "4":
-        show_report()
-    elif choice == "5":
-        delete_expense()
-    elif choice == "6":
-        show_month_report()
-    elif choice == "7":
-        print("Goodbye!")
-        break
-    else:
-        print("Please choose 1, 2, 3, 4, 5, 6 or 7.")
+        if choice == "1":
+            add_expense()
+        elif choice == "2":
+            show_total()
+        elif choice == "3":
+            show_food_total()
+        elif choice == "4":
+            show_report()
+        elif choice == "5":
+            delete_expense()
+        elif choice == "6":
+            show_month_report()
+        elif choice == "7":
+            print("Goodbye!")
+            break
+        else:
+            print("Please choose 1, 2, 3, 4, 5, 6 or 7.")
