@@ -28,6 +28,21 @@ def ask_text(question):
             return answer
         print("Please enter something.")
 
+def create_expense(item, category, amount):
+    """Build a new expense record with today's date."""
+    today = date.today().isoformat()
+    return {"item": item, "category": category, "amount": amount, "date": today}
+
+def parse_amount(text):
+    """Return (amount, error_message). error_message is None if the amount is valid."""
+    try:
+        amount = float(text)
+    except ValueError:
+        return None, "Please enter a number, like 4.50"
+    if amount >= 0:
+        return amount, None
+    return None, "Please enter 0 or more."
+
 def add_expense():
     """Ask the user to input a new expense."""
     item = ask_text("What did you buy? ")
@@ -38,43 +53,44 @@ def add_expense():
         return
     category = category.lower()
     while True:
-        try:
-            answer = input("How much did it cost (£)? ")
-            if answer.lower() == "back":
-                return
-            amount = float(answer)
-            if amount >= 0:
-                break
-            else:
-                print("Please enter 0 or more.")
-        except ValueError:
-            print("Please enter a number, like 4.50")
-    today = date.today().isoformat()
-    expenses.append({"item": item, "category": category, "amount": amount, "date": today})
+        answer = input("How much did it cost (£)? ")
+        if answer.lower() == "back":
+            return
+        amount, error = parse_amount(answer)
+        if error is None:
+            break
+        print(error)
+    expenses.append(create_expense(item, category, amount))
     save_expenses()
     print("Saved!")
 
-def show_total():
-    """Print the total of all expenses."""
+def calculate_total(expenses):
+    """Return the total of all expenses."""
     total = 0
     for expense in expenses:
         total = total + expense["amount"]
+    return total
+
+def calculate_category_total(expenses, category):
+    """Return the total of expenses in one category."""
+    total = 0
+    for expense in expenses:
+        if expense["category"] == category:
+            total = total + expense["amount"]
+    return total
+
+def show_total():
+    """Print the total of all expenses."""
+    total = calculate_total(expenses)
     print(f"Total spent: £{total:.2f}")
 
 def show_food_total():
     """Print the total of all food expenses."""
-    total = 0
-    for expense in expenses:
-        if expense["category"] == "food":
-            total = total + expense["amount"]
+    total = calculate_category_total(expenses, "food")
     print(f"Food total: £{total:.2f}")
 
-def show_report():
-    """Print all different category expenses, then print the whole total."""
-    if not expenses:
-        print("No expenses yet.")
-        return
-
+def calculate_category_breakdown(expenses):
+    """Return a dict of {category: total} for all expenses."""
     totals = {}
     for expense in expenses:
         category = expense["category"]
@@ -82,11 +98,45 @@ def show_report():
             totals[category] = totals[category] + expense["amount"]
         else:
             totals[category] = expense["amount"]
+    return totals
+
+def show_report():
+    """Print all different category expenses, then print the whole total."""
+    if not expenses:
+        print("No expenses yet.")
+        return
+
+    totals = calculate_category_breakdown(expenses)
 
     print("\nSpending by category:")
     for category, amount in totals.items():
         print(f"{category}: £{amount:.2f}")
     show_total()
+
+def parse_month(text):
+    """Return the month as a normalized 'YYYY-MM' string, or None if invalid."""
+    parts = text.split("-")
+    if len(parts) != 2 or len(parts[0]) != 4 or len(parts[1]) != 2:
+        return None
+    try:
+        year = int(parts[0])
+        month = int(parts[1])
+    except ValueError:
+        return None
+    if 1 <= month <= 12:
+        return text
+    return None
+
+def filter_by_month(expenses, month):
+    """Return (matching_expenses, skipped_count) for expenses in that month."""
+    matches = []
+    skipped = 0
+    for expense in expenses:
+        if "date" not in expense:
+            skipped = skipped + 1
+        elif expense["date"][:7] == month:
+            matches.append(expense)
+    return matches, skipped
 
 def ask_month(question):
     """Ask until the user gives a valid YYYY-MM month. Return None if they type 'back'."""
@@ -94,18 +144,9 @@ def ask_month(question):
         answer = ask_text(question)
         if answer is None:
             return None
-        parts = answer.split("-")
-        if len(parts) != 2 or len(parts[0]) != 4 or len(parts[1]) != 2:
-            print("Please enter a month like 2026-11.")
-            continue
-        try:
-            year = int(parts[0])
-            month = int(parts[1])
-        except ValueError:
-            print("Please enter a month like 2026-11.")
-            continue
-        if 1 <= month <= 12:
-            return answer
+        month = parse_month(answer)
+        if month is not None:
+            return month
         print("Please enter a month like 2026-11.")
 
 def show_month_report():
@@ -114,26 +155,35 @@ def show_month_report():
     if month is None:
         return
 
-    matches = []
-    skipped = 0
-    for expense in expenses:
-        if "date" not in expense:
-            skipped = skipped + 1
-        elif expense["date"][:7] == month:
-            matches.append(expense)
+    matches, skipped = filter_by_month(expenses, month)
 
     if not matches:
         print(f"No expenses found for {month}.")
     else:
         print(f"\nExpenses for {month}:")
-        total = 0
         for expense in matches:
             print(f"{expense['item']}: £{expense['amount']:.2f} ({expense['date']})")
-            total = total + expense["amount"]
+        total = calculate_total(matches)
         print(f"Total for {month}: £{total:.2f}")
 
     if skipped:
         print(f"({skipped} expense(s) skipped - no date saved.)")
+
+def parse_delete_number(text, count):
+    """Return (number, error_message). error_message is None if the number is valid."""
+    try:
+        number = int(text)
+    except ValueError:
+        return None, "Please enter a whole number."
+    if 1 <= number <= count:
+        return number, None
+    return None, f"Please enter a number between 1 and {count}."
+
+def remove_expense_at(expenses, number):
+    """Remove and return the expense at the given 1-based position, then save."""
+    removed = expenses.pop(number - 1)
+    save_expenses()
+    return removed
 
 def delete_expense():
     """Let the user remove one expense by number."""
@@ -151,20 +201,13 @@ def delete_expense():
         answer = input("Number to delete (or 'back'): ").strip().lower()
         if answer == "back":
             return
-        try:
-            number = int(answer)
-            if 1 <= number <= len(expenses):
-                break
-            else:
-                print(f"Please enter a number between 1 and {len(expenses)}.")
-        except ValueError:
-            print("Please enter a whole number.")
+        number, error = parse_delete_number(answer, len(expenses))
+        if error is None:
+            break
+        print(error)
 
-    # 4. Remove it (remember: list positions start at 0!)
-    removed = expenses.pop(number -1)
-
-    # 5. Save and confirm
-    save_expenses()
+    # 4. Remove it, 5. Save and confirm
+    removed = remove_expense_at(expenses, number)
     print(f"Deleted: {removed['item']}")
 
 while True:
