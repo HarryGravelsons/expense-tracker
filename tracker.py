@@ -1,21 +1,68 @@
-import json
-import os
+import sqlite3
 from datetime import date
 
-FILENAME = "expenses.json"
+DB_FILENAME = "expenses.db"
+
+def get_connection():
+    """Open a new connection to the SQLite database."""
+    return sqlite3.connect(DB_FILENAME)
+
+def init_db():
+    """Create the expenses table if it doesn't already exist."""
+    connection = get_connection()
+    try:
+        with connection:
+            connection.execute("""
+                CREATE TABLE IF NOT EXISTS expenses (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    item TEXT NOT NULL,
+                    category TEXT NOT NULL,
+                    amount REAL NOT NULL,
+                    date TEXT
+                )
+            """)
+    finally:
+        connection.close()
 
 def load_expenses():
-    """Reads all the expenses from the JSON file."""
-    if os.path.exists(FILENAME):
-        with open(FILENAME, "r") as file:
-            return json.load(file)
-    return []
+    """Reads all the expenses from the database."""
+    connection = get_connection()
+    try:
+        rows = connection.execute(
+            "SELECT item, category, amount, date FROM expenses ORDER BY id"
+        ).fetchall()
+    finally:
+        connection.close()
 
+    expenses = []
+    for item, category, amount, expense_date in rows:
+        expense = {"item": item, "category": category, "amount": amount}
+        if expense_date is not None:
+            expense["date"] = expense_date
+        expenses.append(expense)
+    return expenses
+
+# TEMPORARY: this rewrites the whole table on every save (delete everything,
+# then re-insert the current list), which mirrors how the old JSON file was
+# always rewritten whole. That's fine for one person using the app, but before
+# adding login or hosting this for others, change add/delete to do a single
+# per-row INSERT or DELETE instead, so one person's save can't wipe or race
+# with another's.
 def save_expenses():
-    """Writes the new expenses to the JSON file."""
-    with open(FILENAME, "w") as file:
-        json.dump(expenses, file, indent=2)
+    """Writes the current expenses list to the database, replacing what was there."""
+    connection = get_connection()
+    try:
+        with connection:
+            connection.execute("DELETE FROM expenses")
+            for expense in expenses:
+                connection.execute(
+                    "INSERT INTO expenses (item, category, amount, date) VALUES (?, ?, ?, ?)",
+                    (expense["item"], expense["category"], expense["amount"], expense.get("date")),
+                )
+    finally:
+        connection.close()
 
+init_db()
 expenses = load_expenses()
 
 def ask_text(question):
