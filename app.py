@@ -1,3 +1,5 @@
+import sys
+
 from flask import Flask, render_template, request, redirect, url_for, flash
 
 import tracker
@@ -42,4 +44,8 @@ def add():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    if "phone" in sys.argv:
+        # Visible to other devices on the same Wi-Fi. Debug must stay off here.
+        app.run(host="0.0.0.0", port=5000, debug=False)
+    else:
+        app.run(debug=True)
