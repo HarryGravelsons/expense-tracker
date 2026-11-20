@@ -36,10 +36,7 @@ def add():
         flash(error)
         return redirect(url_for("index"))
 
-    expenses = tracker.load_expenses()
-    expenses.append(tracker.create_expense(item, category, amount))
-    tracker.expenses = expenses
-    tracker.save_expenses()
+    tracker.insert_expense(tracker.create_expense(item, category, amount))
     return redirect(url_for("index"))
 
 

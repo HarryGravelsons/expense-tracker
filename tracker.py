@@ -29,41 +29,42 @@ def load_expenses():
     connection = get_connection()
     try:
         rows = connection.execute(
-            "SELECT item, category, amount, date FROM expenses ORDER BY id"
+            "SELECT id, item, category, amount, date FROM expenses ORDER BY id"
         ).fetchall()
     finally:
         connection.close()
 
     expenses = []
-    for item, category, amount, expense_date in rows:
-        expense = {"item": item, "category": category, "amount": amount}
+    for expense_id, item, category, amount, expense_date in rows:
+        expense = {"id": expense_id, "item": item, "category": category, "amount": amount}
         if expense_date is not None:
             expense["date"] = expense_date
         expenses.append(expense)
     return expenses
 
-# TEMPORARY: this rewrites the whole table on every save (delete everything,
-# then re-insert the current list), which mirrors how the old JSON file was
-# always rewritten whole. That's fine for one person using the app, but before
-# adding login or hosting this for others, change add/delete to do a single
-# per-row INSERT or DELETE instead, so one person's save can't wipe or race
-# with another's.
-def save_expenses():
-    """Writes the current expenses list to the database, replacing what was there."""
+def insert_expense(expense):
+    """Inserts one expense into the database and returns its new id."""
     connection = get_connection()
     try:
         with connection:
-            connection.execute("DELETE FROM expenses")
-            for expense in expenses:
-                connection.execute(
-                    "INSERT INTO expenses (item, category, amount, date) VALUES (?, ?, ?, ?)",
-                    (expense["item"], expense["category"], expense["amount"], expense.get("date")),
-                )
+            cursor = connection.execute(
+                "INSERT INTO expenses (item, category, amount, date) VALUES (?, ?, ?, ?)",
+                (expense["item"], expense["category"], expense["amount"], expense.get("date")),
+            )
+            return cursor.lastrowid
+    finally:
+        connection.close()
+
+def delete_expense_row(expense_id):
+    """Deletes one expense from the database by its id."""
+    connection = get_connection()
+    try:
+        with connection:
+            connection.execute("DELETE FROM expenses WHERE id = ?", (expense_id,))
     finally:
         connection.close()
 
 init_db()
-expenses = load_expenses()
 
 def ask_text(question):
     """Ask until the user gives a non-empty answer. Return None if they type 'back'."""
@@ -107,8 +108,7 @@ def add_expense():
         if error is None:
             break
         print(error)
-    expenses.append(create_expense(item, category, amount))
-    save_expenses()
+    insert_expense(create_expense(item, category, amount))
     print("Saved!")
 
 def calculate_total(expenses):
@@ -128,11 +128,13 @@ def calculate_category_total(expenses, category):
 
 def show_total():
     """Print the total of all expenses."""
+    expenses = load_expenses()
     total = calculate_total(expenses)
     print(f"Total spent: £{total:.2f}")
 
 def show_food_total():
     """Print the total of all food expenses."""
+    expenses = load_expenses()
     total = calculate_category_total(expenses, "food")
     print(f"Food total: £{total:.2f}")
 
@@ -149,6 +151,7 @@ def calculate_category_breakdown(expenses):
 
 def show_report():
     """Print all different category expenses, then print the whole total."""
+    expenses = load_expenses()
     if not expenses:
         print("No expenses yet.")
         return
@@ -202,6 +205,7 @@ def show_month_report():
     if month is None:
         return
 
+    expenses = load_expenses()
     matches, skipped = filter_by_month(expenses, month)
 
     if not matches:
@@ -227,13 +231,14 @@ def parse_delete_number(text, count):
     return None, f"Please enter a number between 1 and {count}."
 
 def remove_expense_at(expenses, number):
-    """Remove and return the expense at the given 1-based position, then save."""
-    removed = expenses.pop(number - 1)
-    save_expenses()
+    """Delete the expense at the given 1-based position by its id, and return it."""
+    removed = expenses[number - 1]
+    delete_expense_row(removed["id"])
     return removed
 
 def delete_expense():
     """Let the user remove one expense by number."""
+    expenses = load_expenses()
     if not expenses:
         print("No expenses to delete.")
         return
