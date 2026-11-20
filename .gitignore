@@ -1,3 +1,4 @@
 expenses.json
 expenses.db
 .venv
+__pycache__
